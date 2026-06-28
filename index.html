@@ -410,7 +410,7 @@ async function submitLead() {
   btnText.textContent = 'Saving…';
   btnArrow.textContent = '⏳';
   try {
-    await fetch(`${API_BASE}/lead`, {
+const API_BASE = '/.netlify/functions';
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
