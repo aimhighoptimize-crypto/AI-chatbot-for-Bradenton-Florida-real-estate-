@@ -1,0 +1,19 @@
+{
+  "name": "ai-chatbot-for-bradenton-florida-real-estate-",
+  "version": "1.0.0",
+  "description": "Missed Call Text Back service (Twilio + Express + Netlify Functions) for the Bradenton, FL real estate chatbot site.",
+  "scripts": {
+    "dev": "netlify dev"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "serverless-http": "^4.0.0",
+    "twilio": "^6.0.2"
+  }
+}
