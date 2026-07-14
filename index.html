@@ -506,7 +506,8 @@ async function sendMessage() {
       throw new Error(err.error || `Error ${response.status}`);
     }
     const data = await response.json();
-    const reply = data.content?.[0]?.text || 'Sorry, try again?';
+    const textBlock = data.content?.find(b => b.type === 'text');
+    const reply = textBlock?.text || 'Sorry, try again?';
     conversationHistory.push({ role: 'user', content: text });
     conversationHistory.push({ role: 'assistant', content: reply });
     if (conversationHistory.length > 40) conversationHistory = conversationHistory.slice(-40);
