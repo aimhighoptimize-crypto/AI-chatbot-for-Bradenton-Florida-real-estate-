@@ -1,0 +1,1138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KDP Multi-Puzzle Book Creator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0f1220;
+    --panel:#161a2c;
+    --panel-2:#1d2238;
+    --border:#2a2f4a;
+    --text:#e8eaf6;
+    --text-dim:#9aa0c3;
+    --accent:#7c5cff;
+    --accent-2:#00d4b5;
+    --accent-warn:#ff9f43;
+    --danger:#ff5c7a;
+    --paper:#ffffff;
+    --radius:10px;
+    font-size:15px;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:radial-gradient(1200px 800px at 10% -10%, #221f45 0%, var(--bg) 55%) fixed;
+    color:var(--text);
+    display:flex;
+    flex-direction:column;
+    min-height:100vh;
+  }
+  /* ---------- Top bar ---------- */
+  header.topbar{
+    display:flex;
+    align-items:center;
+    gap:16px;
+    padding:12px 20px;
+    background:linear-gradient(90deg, #1a1e35, #201a3a);
+    border-bottom:1px solid var(--border);
+    flex-wrap:wrap;
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-weight:700;
+    font-size:17px;
+    white-space:nowrap;
+  }
+  .brand .logo{
+    width:30px;height:30px;border-radius:8px;
+    background:linear-gradient(135deg, var(--accent), var(--accent-2));
+    display:flex;align-items:center;justify-content:center;
+    font-size:16px;
+  }
+  .topbar input#bookTitle{
+    flex:1;
+    min-width:200px;
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:9px 12px;
+    border-radius:8px;
+    font-size:14px;
+  }
+  .btn{
+    border:none;
+    border-radius:8px;
+    padding:10px 16px;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    transition:transform .08s ease, filter .15s ease, box-shadow .15s ease;
+    white-space:nowrap;
+  }
+  .btn:active{transform:translateY(1px);}
+  .btn-primary{
+    background:linear-gradient(135deg, var(--accent), #5a3ff0);
+    color:white;
+    box-shadow:0 4px 14px rgba(124,92,255,.35);
+  }
+  .btn-primary:hover{filter:brightness(1.08);}
+  .btn-export{
+    background:linear-gradient(135deg, var(--accent-2), #00a389);
+    color:#04231d;
+    box-shadow:0 4px 14px rgba(0,212,181,.3);
+    font-size:15px;
+    padding:11px 20px;
+  }
+  .btn-export:hover{filter:brightness(1.06);}
+  .btn-ghost{
+    background:transparent;
+    border:1px solid var(--border);
+    color:var(--text-dim);
+  }
+  .btn-ghost:hover{color:var(--text); border-color:var(--accent);}
+  .btn-danger{
+    background:transparent;
+    border:1px solid rgba(255,92,122,.5);
+    color:var(--danger);
+  }
+  .btn-danger:hover{background:rgba(255,92,122,.12);}
+  .btn:disabled{opacity:.5; cursor:not-allowed; filter:none;}
+
+  /* ---------- Layout ---------- */
+  .layout{
+    display:flex;
+    flex:1;
+    min-height:0;
+  }
+  .sidebar{
+    width:360px;
+    flex:0 0 360px;
+    background:var(--panel);
+    border-right:1px solid var(--border);
+    overflow-y:auto;
+    padding:18px;
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+  }
+  .main{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:26px;
+    overflow-y:auto;
+    gap:16px;
+  }
+  section.card{
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:14px 16px;
+  }
+  section.card h3{
+    margin:0 0 10px 0;
+    font-size:12px;
+    letter-spacing:.09em;
+    text-transform:uppercase;
+    color:var(--text-dim);
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  label.field{
+    display:block;
+    font-size:12.5px;
+    color:var(--text-dim);
+    margin:10px 0 5px;
+  }
+  label.field:first-of-type{margin-top:0;}
+  select, input[type=number], textarea, input[type=text]{
+    width:100%;
+    background:#11142200;
+    background:rgba(0,0,0,.25);
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:8px 10px;
+    border-radius:7px;
+    font-size:13.5px;
+    font-family:inherit;
+  }
+  textarea{resize:vertical; min-height:70px; line-height:1.4;}
+  select:focus, input:focus, textarea:focus{outline:2px solid var(--accent); outline-offset:1px;}
+
+  .puzzle-type-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+  }
+  .type-option{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:9px 10px;
+    cursor:pointer;
+    font-size:13px;
+    background:rgba(0,0,0,.15);
+    transition:border-color .12s, background .12s;
+  }
+  .type-option.active{
+    border-color:var(--accent);
+    background:rgba(124,92,255,.14);
+  }
+  .type-option input{display:none;}
+
+  .row2{display:flex; gap:10px;}
+  .row2 > *{flex:1;}
+
+  .conditional-block{display:none;}
+  .conditional-block.show{display:block;}
+
+  #addBtn{width:100%; margin-top:6px;}
+
+  .book-list{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    max-height:280px;
+    overflow-y:auto;
+  }
+  .book-item{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:7px 9px;
+    border-radius:7px;
+    border:1px solid var(--border);
+    background:rgba(0,0,0,.18);
+    font-size:12.5px;
+    cursor:pointer;
+  }
+  .book-item.selected{border-color:var(--accent-2); background:rgba(0,212,181,.1);}
+  .book-item .idx{
+    width:22px;height:22px;border-radius:5px;
+    background:var(--panel);
+    display:flex;align-items:center;justify-content:center;
+    font-size:10.5px; color:var(--text-dim); flex:0 0 auto;
+  }
+  .book-item .meta{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .book-item .del{
+    color:var(--text-dim);
+    background:none; border:none; cursor:pointer; font-size:14px; padding:2px 6px;
+  }
+  .book-item .del:hover{color:var(--danger);}
+  .empty-note{color:var(--text-dim); font-size:12.5px; padding:8px 2px;}
+
+  .stats-row{display:flex; gap:8px; flex-wrap:wrap; font-size:12px; color:var(--text-dim); margin-top:8px;}
+  .stats-row span{background:rgba(0,0,0,.2); border:1px solid var(--border); padding:3px 8px; border-radius:20px;}
+
+  /* ---------- Preview ---------- */
+  .preview-toolbar{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    background:var(--panel);
+    border:1px solid var(--border);
+    padding:8px 14px;
+    border-radius:10px;
+    flex-wrap:wrap;
+    justify-content:center;
+  }
+  .preview-toolbar .spacer{flex:1;}
+  .toggle-switch{
+    display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-dim); cursor:pointer; user-select:none;
+  }
+  .toggle-switch input{display:none;}
+  .toggle-track{
+    width:38px;height:20px;border-radius:20px;background:#333855;position:relative; transition:background .15s;
+  }
+  .toggle-track::after{
+    content:'';
+    position:absolute; top:2px; left:2px; width:16px;height:16px;border-radius:50%;
+    background:white; transition:left .15s;
+  }
+  .toggle-switch input:checked + .toggle-track{background:var(--accent-2);}
+  .toggle-switch input:checked + .toggle-track::after{left:20px;}
+
+  .page-frame{
+    background:var(--paper);
+    box-shadow:0 20px 55px rgba(0,0,0,.55), 0 2px 8px rgba(0,0,0,.4);
+    border-radius:3px;
+    overflow:hidden;
+    line-height:0;
+  }
+  #previewCanvas{
+    display:block;
+    width:min(560px, 78vw);
+    height:auto;
+  }
+  .preview-caption{
+    color:var(--text-dim);
+    font-size:12.5px;
+    text-align:center;
+  }
+  .empty-preview{
+    color:var(--text-dim);
+    text-align:center;
+    padding:80px 20px;
+    max-width:420px;
+  }
+  .empty-preview .big{font-size:40px; margin-bottom:10px;}
+
+  /* ---------- Progress modal ---------- */
+  .progress-overlay{
+    position:fixed; inset:0; background:rgba(5,6,15,.72);
+    display:none; align-items:center; justify-content:center; z-index:50;
+    backdrop-filter:blur(2px);
+  }
+  .progress-overlay.show{display:flex;}
+  .progress-box{
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:26px 30px;
+    width:340px;
+    text-align:center;
+  }
+  .progress-box h4{margin:0 0 14px; font-size:14px; color:var(--text);}
+  .progress-bar-outer{
+    height:10px; border-radius:6px; background:#11142a; overflow:hidden; border:1px solid var(--border);
+  }
+  .progress-bar-inner{
+    height:100%; width:0%;
+    background:linear-gradient(90deg, var(--accent), var(--accent-2));
+    transition:width .1s linear;
+  }
+  .progress-label{margin-top:10px; font-size:12px; color:var(--text-dim);}
+
+  ::-webkit-scrollbar{width:9px; height:9px;}
+  ::-webkit-scrollbar-thumb{background:#31365a; border-radius:6px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+
+  @media (max-width:900px){
+    .layout{flex-direction:column;}
+    .sidebar{width:100%; flex:none; border-right:none; border-bottom:1px solid var(--border);}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand"><div class="logo">📘</div> KDP Puzzle Book Creator</div>
+  <input id="bookTitle" type="text" placeholder="Book title (e.g. 100 Sudoku Puzzles for Adults)" value="My Puzzle Book">
+  <button class="btn btn-ghost" id="clearAllBtn" title="Remove all pages">Clear All</button>
+  <button class="btn btn-export" id="exportBtn">⬇ Export KDP-Ready PDF</button>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+
+    <section class="card">
+      <h3>1 · Puzzle Type</h3>
+      <div class="puzzle-type-grid" id="typeGrid">
+        <label class="type-option active" data-type="sudoku"><input type="radio" name="ptype" value="sudoku" checked>🔢 Sudoku</label>
+        <label class="type-option" data-type="wordsearch"><input type="radio" name="ptype" value="wordsearch">🔍 Word Search</label>
+        <label class="type-option" data-type="mathfill"><input type="radio" name="ptype" value="mathfill">➕ Math Fill</label>
+        <label class="type-option" data-type="cryptogram"><input type="radio" name="ptype" value="cryptogram">🔐 Cryptogram</label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>2 · Settings</h3>
+      <label class="field">Difficulty (Sudoku &amp; Math Fill)</label>
+      <select id="difficulty">
+        <option value="easy">Easy</option>
+        <option value="medium" selected>Medium</option>
+        <option value="hard">Hard</option>
+      </select>
+
+      <div class="conditional-block" data-for="wordsearch">
+        <label class="field">Word List (comma or newline separated, 15×15 grid)</label>
+        <textarea id="wordList">BRADENTON, SARASOTA, GULFCOAST, ANNAMARIA, PALMETTO, MANATEE, REALTOR, SUNSHINE, BEACHES, FLORIDA, MARINA, DOLPHIN</textarea>
+      </div>
+
+      <div class="conditional-block" data-for="cryptogram">
+        <label class="field">Custom Quotes (one per line — leave blank to use built-in library)</label>
+        <textarea id="quoteList" placeholder="A house is made of walls and beams; a home is built with love and dreams."></textarea>
+      </div>
+
+      <label class="field">Batch Count</label>
+      <div class="row2">
+        <input type="number" id="batchCount" min="1" max="500" value="5">
+        <button class="btn btn-primary" id="addBtn">+ Generate &amp; Add</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>3 · Book Contents</h3>
+      <div class="book-list" id="bookList">
+        <div class="empty-note">No puzzles yet. Generate some above to get started.</div>
+      </div>
+      <div class="stats-row" id="statsRow"></div>
+    </section>
+
+  </aside>
+
+  <main class="main">
+    <div class="preview-toolbar">
+      <button class="btn btn-ghost" id="prevBtn">‹ Prev</button>
+      <span class="preview-caption" id="pageIndicator">—</span>
+      <button class="btn btn-ghost" id="nextBtn">Next ›</button>
+      <div class="spacer"></div>
+      <label class="toggle-switch">
+        <span>Puzzle</span>
+        <input type="checkbox" id="solutionToggle">
+        <span class="toggle-track"></span>
+        <span>Solution</span>
+      </label>
+      <button class="btn btn-danger" id="removeCurrentBtn">Remove Page</button>
+    </div>
+
+    <div id="previewWrap">
+      <div class="empty-preview" id="emptyPreview">
+        <div class="big">🧩</div>
+        Your live preview will appear here.<br>Pick a puzzle type on the left and click <strong>Generate &amp; Add</strong>.
+      </div>
+      <div class="page-frame" id="pageFrame" style="display:none;">
+        <canvas id="previewCanvas" width="2550" height="3300"></canvas>
+      </div>
+    </div>
+    <div class="preview-caption" id="previewMeta"></div>
+  </main>
+</div>
+
+<div class="progress-overlay" id="progressOverlay">
+  <div class="progress-box">
+    <h4 id="progressTitle">Working…</h4>
+    <div class="progress-bar-outer"><div class="progress-bar-inner" id="progressBarInner"></div></div>
+    <div class="progress-label" id="progressLabel">0%</div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* =========================================================================
+   0. CONSTANTS & KDP PRINT LAYOUT MATH
+   ========================================================================= */
+const PAGE_W = 8.5, PAGE_H = 11;          // inches, KDP standard trim
+const OUTER_MARGIN = 0.5;                  // in — outer edge safety margin
+const GUTTER_MARGIN = 0.75;                // in — inside binding margin
+const HEADER_GAP = 0.32;                   // in — header text zone below top margin
+const FOOTER_GAP = 0.30;                   // in — footer text zone above bottom margin
+const PREVIEW_DPI = 300;                   // 300 DPI print-sharp rendering
+
+const TYPE_LABELS = {
+  sudoku:'SUDOKU', wordsearch:'WORD SEARCH', mathfill:'MATH FILL', cryptogram:'CRYPTOGRAM'
+};
+
+/** Returns the print-safe content box for a given 1-based page number,
+ *  mirroring margins left/right so the 0.75" gutter always sits on the
+ *  binding side (odd pages = gutter left, even pages = gutter right). */
+function pageBox(pageNumber){
+  const gutterLeft = (pageNumber % 2) === 1;
+  const marginLeft  = gutterLeft ? GUTTER_MARGIN : OUTER_MARGIN;
+  const marginRight = gutterLeft ? OUTER_MARGIN : GUTTER_MARGIN;
+  return {
+    pageW: PAGE_W, pageH: PAGE_H,
+    marginLeft, marginRight, marginTop: OUTER_MARGIN, marginBottom: OUTER_MARGIN,
+    contentX: marginLeft,
+    contentY: OUTER_MARGIN + HEADER_GAP,
+    contentW: PAGE_W - marginLeft - marginRight,
+    contentH: PAGE_H - OUTER_MARGIN*2 - HEADER_GAP - FOOTER_GAP
+  };
+}
+
+/* =========================================================================
+   1. RANDOM / GENERAL HELPERS
+   ========================================================================= */
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]] = [arr[j],arr[i]];
+  }
+  return arr;
+}
+function randInt(min,max){ return min + Math.floor(Math.random()*(max-min+1)); }
+function pick(arr){ return arr[randInt(0,arr.length-1)]; }
+
+/* =========================================================================
+   2. DRAW-COMMAND RENDERERS  (single source of truth for both the on-screen
+      canvas preview and the exported PDF — every puzzle generator emits an
+      array of simple, unit-in-inches draw commands consumed by both.)
+   ========================================================================= */
+function renderCommandsToCanvas(ctx, cmds, dpi){
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0,0,ctx.canvas.width, ctx.canvas.height);
+  for(const c of cmds){
+    const col = (c.stroke||[0,0,0]);
+    if(c.t === 'rect'){
+      if(c.fill){ ctx.fillStyle = `rgb(${c.fill[0]},${c.fill[1]},${c.fill[2]})`; ctx.fillRect(c.x*dpi,c.y*dpi,c.w*dpi,c.h*dpi); }
+      if(c.stroke){
+        ctx.lineWidth = (c.lw||1)*dpi/72;
+        ctx.strokeStyle = `rgb(${col[0]},${col[1]},${col[2]})`;
+        ctx.strokeRect(c.x*dpi,c.y*dpi,c.w*dpi,c.h*dpi);
+      }
+    } else if(c.t === 'line'){
+      ctx.lineCap = 'butt';
+      ctx.lineWidth = (c.lw||1)*dpi/72;
+      ctx.strokeStyle = `rgb(${col[0]},${col[1]},${col[2]})`;
+      ctx.beginPath(); ctx.moveTo(c.x1*dpi,c.y1*dpi); ctx.lineTo(c.x2*dpi,c.y2*dpi); ctx.stroke();
+    } else if(c.t === 'stadium'){
+      ctx.lineCap = 'round';
+      ctx.lineWidth = c.lw*dpi;
+      ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},0.5)`;
+      ctx.beginPath(); ctx.moveTo(c.x1*dpi,c.y1*dpi); ctx.lineTo(c.x2*dpi,c.y2*dpi); ctx.stroke();
+      ctx.lineCap = 'butt';
+    } else if(c.t === 'text'){
+      const px = c.size/72*dpi;
+      ctx.font = `${c.bold?'bold ':''}${px}px Helvetica, Arial, sans-serif`;
+      ctx.fillStyle = `rgb(${(c.color||[0,0,0])[0]},${(c.color||[0,0,0])[1]},${(c.color||[0,0,0])[2]})`;
+      ctx.textAlign = c.align === 'center' ? 'center' : (c.align === 'right' ? 'right' : 'left');
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(c.s, c.x*dpi, c.y*dpi);
+    } else if(c.t === 'circle'){
+      ctx.lineWidth = (c.lw||1)*dpi/72;
+      ctx.strokeStyle = `rgb(${col[0]},${col[1]},${col[2]})`;
+      ctx.beginPath(); ctx.arc(c.x*dpi,c.y*dpi,c.r*dpi,0,Math.PI*2); ctx.stroke();
+    }
+  }
+}
+
+function renderCommandsToPDF(doc, cmds){
+  doc.setLineCap('butt');
+  for(const c of cmds){
+    const col = c.stroke || [0,0,0];
+    if(c.t === 'rect'){
+      doc.setDrawColor(col[0],col[1],col[2]);
+      doc.setLineWidth((c.lw||1)/72);
+      if(c.fill){ doc.setFillColor(c.fill[0],c.fill[1],c.fill[2]); doc.rect(c.x,c.y,c.w,c.h, c.stroke ? 'FD':'F'); }
+      else if(c.stroke){ doc.rect(c.x,c.y,c.w,c.h,'S'); }
+    } else if(c.t === 'line'){
+      doc.setDrawColor(col[0],col[1],col[2]);
+      doc.setLineWidth((c.lw||1)/72);
+      doc.line(c.x1,c.y1,c.x2,c.y2);
+    } else if(c.t === 'stadium'){
+      doc.setLineCap('round');
+      doc.setDrawColor(col[0],col[1],col[2]);
+      doc.setLineWidth(c.lw);
+      doc.line(c.x1,c.y1,c.x2,c.y2);
+      doc.setLineCap('butt');
+    } else if(c.t === 'text'){
+      doc.setFont('helvetica', c.bold ? 'bold':'normal');
+      doc.setFontSize(c.size);
+      const tc = c.color || [0,0,0];
+      doc.setTextColor(tc[0],tc[1],tc[2]);
+      doc.text(String(c.s), c.x, c.y, {align: c.align === 'center' ? 'center' : (c.align==='right'?'right':'left')});
+    } else if(c.t === 'circle'){
+      doc.setDrawColor(col[0],col[1],col[2]);
+      doc.setLineWidth((c.lw||1)/72);
+      doc.circle(c.x,c.y,c.r,'S');
+    }
+  }
+}
+
+/** Wraps generator output with the standard KDP header (title) & footer
+ *  (centered page number) reserved zones. */
+function wrapPage(innerCmds, pageNumber, title, box){
+  const out = [];
+  out.push({t:'text', x:box.contentX+box.contentW/2, y:OUTER_MARGIN+0.20, s:title, size:13, align:'center', bold:true, color:[20,20,30]});
+  out.push({t:'line', x1:box.contentX, y1:OUTER_MARGIN+0.30, x2:box.contentX+box.contentW, y2:OUTER_MARGIN+0.30, lw:0.75, stroke:[190,190,200]});
+  out.push(...innerCmds);
+  out.push({t:'text', x:PAGE_W/2, y:PAGE_H-OUTER_MARGIN+0.20, s:String(pageNumber), size:10, align:'center', color:[90,90,100]});
+  return out;
+}
+
+/* =========================================================================
+   3. SUDOKU ENGINE
+   ========================================================================= */
+const Sudoku = {
+  generateFullGrid(){
+    const g = Array.from({length:9},()=>Array(9).fill(0));
+    function valid(r,c,v){
+      for(let i=0;i<9;i++){ if(g[r][i]===v || g[i][c]===v) return false; }
+      const br=(r/3|0)*3, bc=(c/3|0)*3;
+      for(let i=0;i<3;i++) for(let j=0;j<3;j++) if(g[br+i][bc+j]===v) return false;
+      return true;
+    }
+    function fill(pos){
+      if(pos===81) return true;
+      const r=(pos/9)|0, c=pos%9;
+      const nums = shuffle([1,2,3,4,5,6,7,8,9]);
+      for(const v of nums){
+        if(valid(r,c,v)){ g[r][c]=v; if(fill(pos+1)) return true; g[r][c]=0; }
+      }
+      return false;
+    }
+    fill(0);
+    return g;
+  },
+  countSolutions(grid, limit){
+    let count = 0;
+    const g = grid.map(r=>r.slice());
+    function valid(r,c,v){
+      for(let i=0;i<9;i++){ if(g[r][i]===v || g[i][c]===v) return false; }
+      const br=(r/3|0)*3, bc=(c/3|0)*3;
+      for(let i=0;i<3;i++) for(let j=0;j<3;j++) if(g[br+i][bc+j]===v) return false;
+      return true;
+    }
+    function solve(pos){
+      if(count>=limit) return;
+      if(pos===81){ count++; return; }
+      const r=(pos/9)|0, c=pos%9;
+      if(g[r][c] !== 0){ solve(pos+1); return; }
+      for(let v=1;v<=9;v++){
+        if(count>=limit) return;
+        if(valid(r,c,v)){ g[r][c]=v; solve(pos+1); g[r][c]=0; }
+      }
+    }
+    solve(0);
+    return count;
+  },
+  generate(difficulty){
+    const solution = this.generateFullGrid();
+    const puzzle = solution.map(r=>r.slice());
+    const clueTarget = difficulty==='easy' ? 38 : difficulty==='hard' ? 24 : 30;
+    const cellsToRemove = 81 - clueTarget;
+    const order = shuffle(Array.from({length:81},(_,i)=>i));
+    let removed = 0;
+    for(const pos of order){
+      if(removed >= cellsToRemove) break;
+      const r=(pos/9)|0, c=pos%9;
+      const backup = puzzle[r][c];
+      if(backup === 0) continue;
+      puzzle[r][c] = 0;
+      if(this.countSolutions(puzzle,2) === 1){ removed++; }
+      else { puzzle[r][c] = backup; }
+    }
+    return {solution, puzzle, difficulty};
+  },
+  render(data, box, mode){
+    const cmds = [];
+    const gridSize = Math.min(box.contentW, box.contentH*0.92);
+    const cell = gridSize/9;
+    const startX = box.contentX + (box.contentW-gridSize)/2;
+    const startY = box.contentY + (box.contentH-gridSize)/2*0.35;
+    const grid = mode==='solution' ? data.solution : data.puzzle;
+    for(let i=0;i<=9;i++){
+      const lw = (i%3===0) ? 2.4 : 0.8;
+      cmds.push({t:'line', x1:startX+i*cell, y1:startY, x2:startX+i*cell, y2:startY+gridSize, lw, stroke:[10,10,20]});
+      cmds.push({t:'line', x1:startX, y1:startY+i*cell, x2:startX+gridSize, y2:startY+i*cell, lw, stroke:[10,10,20]});
+    }
+    for(let r=0;r<9;r++) for(let c=0;c<9;c++){
+      const v = grid[r][c];
+      if(v){
+        const isGiven = mode!=='solution' || data.puzzle[r][c] !== 0;
+        cmds.push({
+          t:'text', x:startX+c*cell+cell/2, y:startY+r*cell+cell*0.70, s:String(v),
+          size: cell*72*0.46, align:'center',
+          bold: mode!=='solution',
+          color: mode==='solution' ? (isGiven?[20,20,30]:[30,110,220]) : [15,15,25]
+        });
+      }
+    }
+    return cmds;
+  }
+};
+
+/* =========================================================================
+   4. WORD SEARCH ENGINE
+   ========================================================================= */
+const DIRECTIONS = [[0,1],[1,0],[1,1],[1,-1],[0,-1],[-1,0],[-1,-1],[-1,1]];
+const WordSearch = {
+  DEFAULT_SIZE: 15,
+  generate(rawWords){
+    const size = this.DEFAULT_SIZE;
+    const grid = Array.from({length:size},()=>Array(size).fill(''));
+    const words = rawWords
+      .map(w=>w.toUpperCase().replace(/[^A-Z]/g,''))
+      .filter(w=>w.length>=2 && w.length<=size);
+    const sorted = words.slice().sort((a,b)=>b.length-a.length);
+    const placements = [];
+    for(const word of sorted){
+      let placed = false;
+      const dirs = shuffle(DIRECTIONS.slice());
+      for(let attempt=0; attempt<300 && !placed; attempt++){
+        const [dr,dc] = dirs[attempt%8];
+        const r0 = randInt(0,size-1), c0 = randInt(0,size-1);
+        const rEnd = r0+dr*(word.length-1), cEnd = c0+dc*(word.length-1);
+        if(rEnd<0||rEnd>=size||cEnd<0||cEnd>=size) continue;
+        let ok = true;
+        for(let i=0;i<word.length;i++){
+          const ch = grid[r0+dr*i][c0+dc*i];
+          if(ch !== '' && ch !== word[i]){ ok=false; break; }
+        }
+        if(!ok) continue;
+        for(let i=0;i<word.length;i++) grid[r0+dr*i][c0+dc*i] = word[i];
+        placements.push({word, r0, c0, dr, dc, len:word.length});
+        placed = true;
+      }
+    }
+    for(let r=0;r<size;r++) for(let c=0;c<size;c++)
+      if(grid[r][c] === '') grid[r][c] = String.fromCharCode(65+randInt(0,25));
+    return {grid, size, placements, words: placements.map(p=>p.word)};
+  },
+  render(data, box, mode){
+    const cmds = [];
+    const size = data.size;
+    const listReserve = 1.7;
+    const gridSize = Math.min(box.contentW, box.contentH-listReserve);
+    const cell = gridSize/size;
+    const startX = box.contentX + (box.contentW-gridSize)/2;
+    const startY = box.contentY;
+    cmds.push({t:'rect', x:startX, y:startY, w:gridSize, h:gridSize, lw:1.4, stroke:[10,10,20]});
+    for(let i=1;i<size;i++){
+      cmds.push({t:'line', x1:startX+i*cell, y1:startY, x2:startX+i*cell, y2:startY+gridSize, lw:0.35, stroke:[210,210,220]});
+      cmds.push({t:'line', x1:startX, y1:startY+i*cell, x2:startX+gridSize, y2:startY+i*cell, lw:0.35, stroke:[210,210,220]});
+    }
+    for(let r=0;r<size;r++) for(let c=0;c<size;c++){
+      cmds.push({t:'text', x:startX+c*cell+cell/2, y:startY+r*cell+cell*0.72, s:data.grid[r][c], size:cell*72*0.44, align:'center', color:[15,15,25]});
+    }
+    if(mode === 'solution'){
+      for(const p of data.placements){
+        const x1 = startX+p.c0*cell+cell/2, y1 = startY+p.r0*cell+cell/2;
+        const rEnd = p.r0+p.dr*(p.len-1), cEnd = p.c0+p.dc*(p.len-1);
+        const x2 = startX+cEnd*cell+cell/2, y2 = startY+rEnd*cell+cell/2;
+        cmds.push({t:'stadium', x1,y1,x2,y2, lw:cell*0.78, stroke:[255,130,20]});
+      }
+    }
+    // List typography is driven by `cell` (already scaled to the box) so it
+    // shrinks proportionally when this renders into a small solutions-index quadrant.
+    const headerFont = Math.max(5, cell*72*0.40);
+    const listFont = Math.max(4, cell*72*0.32);
+    const rowH = Math.max(0.11, cell*0.85);
+    const listY = startY+gridSize+Math.max(0.14, cell*0.55);
+    cmds.push({t:'text', x:box.contentX, y:listY, s:'FIND THESE WORDS:', size:headerFont, align:'left', bold:true, color:[15,15,25]});
+    const cols = 3, colW = box.contentW/cols;
+    data.words.forEach((w,i)=>{
+      const col = i%cols, row = Math.floor(i/cols);
+      cmds.push({t:'text', x:box.contentX+col*colW, y:listY+rowH*1.15+row*rowH, s:w, size:listFont, align:'left', color: mode==='solution'?[0,140,90]:[15,15,25]});
+    });
+    return cmds;
+  }
+};
+
+/* =========================================================================
+   5. MATH FILL (CROSS-MATH) ENGINE
+   ========================================================================= */
+const MathFill = {
+  OPS: ['+','-','×'],
+  evalOp(a,op,b){
+    if(op==='+') return a+b;
+    if(op==='-') return a-b;
+    return a*b;
+  },
+  generateBlock(hintCount){
+    const N = Array.from({length:3},()=>Array.from({length:3},()=>randInt(1,9)));
+    const opsH = Array.from({length:3},()=>[pick(this.OPS), pick(this.OPS)]);
+    const opsV = Array.from({length:3},()=>[pick(this.OPS), pick(this.OPS)]);
+    const rowResults = N.map((row,r)=> this.evalOp(this.evalOp(row[0],opsH[r][0],row[1]), opsH[r][1], row[2]));
+    const colResults = [0,1,2].map(c=> this.evalOp(this.evalOp(N[0][c],opsV[c][0],N[1][c]), opsV[c][1], N[2][c]));
+    const hintMask = [[false,false,false],[false,false,false],[false,false,false]];
+    const order = shuffle([0,1,2,3,4,5,6,7,8]);
+    for(let i=0;i<hintCount;i++){ const p=order[i]; hintMask[(p/3)|0][p%3] = true; }
+    return {N, opsH, opsV, rowResults, colResults, hintMask};
+  },
+  generate(difficulty){
+    const hints = difficulty==='easy' ? 4 : difficulty==='hard' ? 0 : 2;
+    return { blocks: [this.generateBlock(hints), this.generateBlock(hints)] };
+  },
+  renderBlock(block, ox, oy, cell, mode, cmds){
+    const colX = i => ox+i*cell, rowY = j => oy+j*cell;
+    function box(cx,cy,text,opts){
+      opts = opts || {};
+      cmds.push({t:'rect', x:cx, y:cy, w:cell, h:cell, lw: opts.thick?1.3:0.7, stroke:[10,10,20], fill: opts.fill||null});
+      if(text !== '' && text !== undefined && text !== null){
+        cmds.push({t:'text', x:cx+cell/2, y:cy+cell*0.68, s:String(text), size:cell*72*0.40, align:'center', bold:!!opts.bold, color: opts.color || [15,15,25]});
+      }
+    }
+    const {N, opsH, opsV, rowResults, colResults, hintMask} = block;
+    for(let r=0;r<3;r++){
+      for(let c=0;c<3;c++){
+        const show = mode==='solution' || hintMask[r][c];
+        box(colX(c*2), rowY(r*2), show ? N[r][c] : '', {thick:true, fill: show ? (mode==='solution'&&!hintMask[r][c] ? [225,240,255] : [255,255,255]) : [255,255,255], color: mode==='solution'&&!hintMask[r][c] ? [30,110,220] : [15,15,25]});
+        if(c<2) box(colX(c*2+1), rowY(r*2), opsH[r][c], {fill:[240,240,247]});
+      }
+      box(colX(5), rowY(r*2), '=', {fill:[240,240,247]});
+      box(colX(6), rowY(r*2), rowResults[r], {fill:[224,235,255], bold:true});
+    }
+    for(let c=0;c<3;c++){
+      box(colX(c*2), rowY(1), opsV[c][0], {fill:[240,240,247]});
+      box(colX(c*2), rowY(3), opsV[c][1], {fill:[240,240,247]});
+    }
+    for(let c=0;c<3;c++){
+      box(colX(c*2), rowY(5), '=', {fill:[240,240,247]});
+      box(colX(c*2), rowY(6), colResults[c], {fill:[224,235,255], bold:true});
+    }
+  },
+  render(data, box, mode){
+    const cmds = [];
+    const cell = Math.min(0.5, box.contentW/7.4, (box.contentH-0.6)/(7.4*2));
+    const blockW = cell*7;
+    const ox = box.contentX + (box.contentW-blockW)/2;
+    const labelFont = Math.max(5, cell*72*0.28);
+    const labelGap = Math.max(0.14, cell*0.35);
+    let oy = box.contentY + labelGap;
+    data.blocks.forEach((block,i)=>{
+      cmds.push({t:'text', x:ox, y:oy-labelGap*0.4, s:`Puzzle ${i+1}`, size:labelFont, align:'left', bold:true, color:[110,110,125]});
+      this.renderBlock(block, ox, oy+labelGap*0.55, cell, mode, cmds);
+      oy += cell*7 + labelGap*1.7;
+    });
+    return cmds;
+  }
+};
+
+/* =========================================================================
+   6. CRYPTOGRAM ENGINE
+   ========================================================================= */
+const BUILTIN_QUOTES = [
+  "THE ONLY WAY TO DO GREAT WORK IS TO LOVE WHAT YOU DO",
+  "WELL DONE IS BETTER THAN WELL SAID",
+  "IN THE MIDDLE OF DIFFICULTY LIES OPPORTUNITY",
+  "THE JOURNEY OF A THOUSAND MILES BEGINS WITH ONE STEP",
+  "IT DOES NOT MATTER HOW SLOWLY YOU GO AS LONG AS YOU DO NOT STOP",
+  "WHAT WE THINK, WE BECOME",
+  "KNOWING YOURSELF IS THE BEGINNING OF ALL WISDOM",
+  "SUCCESS IS NOT FINAL, FAILURE IS NOT FATAL, IT IS THE COURAGE TO CONTINUE THAT COUNTS",
+  "A HOUSE IS MADE OF WALLS AND BEAMS, A HOME IS BUILT WITH LOVE AND DREAMS",
+  "THE FUTURE BELONGS TO THOSE WHO BELIEVE IN THE BEAUTY OF THEIR DREAMS"
+];
+const Cryptogram = {
+  generateCipherMap(){
+    const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+    let s;
+    do { s = shuffle(A.slice()); } while(A.some((ch,i)=>ch===s[i]));
+    const map = {};
+    A.forEach((ch,i)=> map[ch]=s[i]);
+    return map;
+  },
+  generate(quote){
+    const plain = quote.toUpperCase().replace(/[^A-Z ,.'!?-]/g,'');
+    const map = this.generateCipherMap();
+    let cipher = '';
+    for(const ch of plain) cipher += /[A-Z]/.test(ch) ? map[ch] : ch;
+    return {plain, cipher, map};
+  },
+  render(data, box, mode){
+    const cmds = [];
+    // `scale` ties every font size / vertical offset below to the same ratio as
+    // the box itself, so the whole layout shrinks cleanly when this renders into
+    // a small solutions-index quadrant instead of overlapping (cellW already
+    // scaled with box.contentW alone, which caused text to outrun its cell).
+    const scale = Math.max(0.22, Math.min(1, box.contentW/7.25));
+    const cellW = Math.min(0.30, box.contentW/40);
+    const cellH = 0.5*scale;
+    const fontMain = 11.5*scale, fontSub = 8.5*scale;
+    let x = box.contentX, y = box.contentY+0.35*scale;
+    const maxX = box.contentX+box.contentW;
+    const plainWords = data.plain.split(' ');
+    const cipherWords = data.cipher.split(' ');
+    for(let w=0; w<plainWords.length; w++){
+      const pw = plainWords[w], cw = cipherWords[w];
+      const wordWidth = pw.length*cellW;
+      if(x+wordWidth > maxX){ x = box.contentX; y += cellH+0.18*scale; }
+      for(let i=0;i<pw.length;i++){
+        const pch = pw[i], cch = cw[i];
+        if(/[A-Z]/.test(pch)){
+          cmds.push({t:'text', x:x+cellW/2, y:y, s:cch, size:fontMain, align:'center', bold:true, color:[15,15,25]});
+          cmds.push({t:'line', x1:x+cellW*0.08, y1:y+0.13*scale, x2:x+cellW*0.92, y2:y+0.13*scale, lw:0.7, stroke:[20,20,30]});
+          if(mode==='solution') cmds.push({t:'text', x:x+cellW/2, y:y+0.115*scale, s:pch, size:fontSub, align:'center', color:[0,140,90]});
+        } else {
+          cmds.push({t:'text', x:x+cellW/2, y:y, s:pch, size:fontMain, align:'center', color:[15,15,25]});
+        }
+        x += cellW;
+      }
+      x += cellW*0.85;
+    }
+    y += cellH+0.5*scale;
+    const invMap = {};
+    Object.keys(data.map).forEach(p=> invMap[data.map[p]] = p);
+    cmds.push({t:'text', x:box.contentX, y:y-0.16*scale, s:'DECODER KEY:', size:10*scale, align:'left', bold:true, color:[15,15,25]});
+    const kcols = 13;
+    const kcell = box.contentW/kcols;
+    for(let i=0;i<26;i++){
+      const col = i%kcols, row = Math.floor(i/kcols);
+      const kx = box.contentX+col*kcell, ky = y+row*0.55*scale;
+      const cipherLetter = String.fromCharCode(65+i);
+      cmds.push({t:'rect', x:kx, y:ky, w:kcell-0.05, h:0.46*scale, lw:0.5, stroke:[150,150,160]});
+      cmds.push({t:'text', x:kx+(kcell-0.05)/2, y:ky+0.19*scale, s:cipherLetter, size:fontSub, align:'center', bold:true, color:[15,15,25]});
+      cmds.push({t:'line', x1:kx+0.05, y1:ky+0.34*scale, x2:kx+kcell-0.1, y2:ky+0.34*scale, lw:0.5, stroke:[120,120,130]});
+      if(mode==='solution') cmds.push({t:'text', x:kx+(kcell-0.05)/2, y:ky+0.32*scale, s:invMap[cipherLetter], size:7.5*scale, align:'center', color:[0,140,90]});
+    }
+    return cmds;
+  }
+};
+
+const ENGINES = { sudoku: Sudoku, wordsearch: WordSearch, mathfill: MathFill, cryptogram: Cryptogram };
+
+function generatePuzzleData(type, params){
+  if(type === 'sudoku') return Sudoku.generate(params.difficulty);
+  if(type === 'wordsearch') return WordSearch.generate(params.words);
+  if(type === 'mathfill') return MathFill.generate(params.difficulty);
+  if(type === 'cryptogram') return Cryptogram.generate(params.quote);
+}
+
+/* =========================================================================
+   7. APPLICATION STATE & UI WIRING
+   ========================================================================= */
+let book = [];              // {id, type, data}
+let currentIndex = -1;
+let showSolution = false;
+let quoteCycle = [];         // shuffled pool consumed round-robin for cryptogram batches
+
+const el = id => document.getElementById(id);
+const canvas = el('previewCanvas');
+const ctx = canvas.getContext('2d');
+
+function currentType(){
+  return document.querySelector('input[name="ptype"]:checked').value;
+}
+
+function updateTypeVisibility(){
+  const t = currentType();
+  document.querySelectorAll('.type-option').forEach(o=> o.classList.toggle('active', o.dataset.type===t));
+  document.querySelectorAll('.conditional-block').forEach(b=> b.classList.toggle('show', b.dataset.for===t));
+}
+document.querySelectorAll('input[name="ptype"]').forEach(r=> r.addEventListener('change', updateTypeVisibility));
+updateTypeVisibility();
+
+function nextQuote(){
+  if(quoteCycle.length === 0){
+    const custom = el('quoteList').value.split('\n').map(s=>s.trim()).filter(Boolean);
+    quoteCycle = shuffle((custom.length ? custom : BUILTIN_QUOTES).slice());
+  }
+  return quoteCycle.pop();
+}
+
+function currentParams(type){
+  const difficulty = el('difficulty').value;
+  if(type === 'wordsearch'){
+    const words = el('wordList').value.split(/[\n,]/).map(s=>s.trim()).filter(Boolean);
+    return {words: words.length ? words : ['PUZZLE','BOOK','CREATOR']};
+  }
+  if(type === 'cryptogram') return {quote: nextQuote()};
+  return {difficulty};
+}
+
+/* ---- progress modal ---- */
+function showProgress(title){
+  el('progressTitle').textContent = title;
+  el('progressBarInner').style.width = '0%';
+  el('progressLabel').textContent = '0%';
+  el('progressOverlay').classList.add('show');
+}
+function setProgress(frac){
+  const pct = Math.round(frac*100);
+  el('progressBarInner').style.width = pct+'%';
+  el('progressLabel').textContent = pct+'%';
+}
+function hideProgress(){ el('progressOverlay').classList.remove('show'); }
+
+/* ---- batch generation: time-budgeted rAF loop so the tab never freezes ---- */
+function generateBatch(type, count, onDone){
+  showProgress(`Generating ${count} ${TYPE_LABELS[type]} puzzle${count>1?'s':''}…`);
+  let i = 0;
+  function step(){
+    const frameStart = performance.now();
+    while(i < count && performance.now()-frameStart < 16){
+      const data = generatePuzzleData(type, currentParams(type));
+      book.push({id: 'p'+Date.now()+'_'+i+'_'+Math.random().toString(36).slice(2,7), type, data});
+      i++;
+    }
+    setProgress(i/count);
+    if(i < count){
+      requestAnimationFrame(step);
+    } else {
+      hideProgress();
+      onDone && onDone();
+    }
+  }
+  requestAnimationFrame(step);
+}
+
+/* ---- book list / stats ---- */
+function refreshBookList(){
+  const listEl = el('bookList');
+  if(book.length === 0){
+    listEl.innerHTML = '<div class="empty-note">No puzzles yet. Generate some above to get started.</div>';
+  } else {
+    listEl.innerHTML = '';
+    book.forEach((p,i)=>{
+      const div = document.createElement('div');
+      div.className = 'book-item' + (i===currentIndex ? ' selected' : '');
+      div.innerHTML = `<div class="idx">${i+1}</div><div class="meta">${TYPE_LABELS[p.type]}</div><button class="del" title="Remove">✕</button>`;
+      div.addEventListener('click', (e)=>{ if(e.target.classList.contains('del')) return; currentIndex=i; renderPreview(); refreshBookList(); });
+      div.querySelector('.del').addEventListener('click', ()=>{
+        book.splice(i,1);
+        if(currentIndex>=book.length) currentIndex = book.length-1;
+        renderPreview(); refreshBookList();
+      });
+      listEl.appendChild(div);
+    });
+  }
+  const counts = {};
+  book.forEach(p=> counts[p.type] = (counts[p.type]||0)+1);
+  const statsEl = el('statsRow');
+  statsEl.innerHTML = `<span>${book.length} page${book.length!==1?'s':''}</span>` +
+    Object.keys(counts).map(k=>`<span>${TYPE_LABELS[k]}: ${counts[k]}</span>`).join('');
+}
+
+/* ---- live preview ---- */
+function renderPreview(){
+  const frame = el('pageFrame'), empty = el('emptyPreview');
+  if(currentIndex < 0 || !book[currentIndex]){
+    frame.style.display = 'none';
+    empty.style.display = 'block';
+    el('pageIndicator').textContent = '—';
+    el('previewMeta').textContent = '';
+    return;
+  }
+  frame.style.display = 'block';
+  empty.style.display = 'none';
+  const p = book[currentIndex];
+  const pageNumber = currentIndex+1;
+  const box = pageBox(pageNumber);
+  const mode = showSolution ? 'solution' : 'puzzle';
+  const title = `${mode==='solution' ? 'SOLUTION — ' : ''}PUZZLE #${pageNumber} — ${TYPE_LABELS[p.type]}`;
+  const cmds = wrapPage(ENGINES[p.type].render(p.data, box, mode), pageNumber, title, box);
+  renderCommandsToCanvas(ctx, cmds, PREVIEW_DPI);
+  el('pageIndicator').textContent = `Page ${pageNumber} of ${book.length}`;
+  el('previewMeta').textContent = `${TYPE_LABELS[p.type]} · ${mode==='solution'?'Solution Key':'Puzzle Page'} · Gutter ${pageNumber%2===1?'left':'right'} (0.75") · Outer margin 0.5"`;
+}
+
+el('addBtn').addEventListener('click', ()=>{
+  const type = currentType();
+  const count = Math.max(1, Math.min(500, parseInt(el('batchCount').value,10) || 1));
+  generateBatch(type, count, ()=>{
+    currentIndex = book.length-1;
+    refreshBookList();
+    renderPreview();
+  });
+});
+
+el('clearAllBtn').addEventListener('click', ()=>{
+  if(book.length && !confirm('Remove all puzzles from the book?')) return;
+  book = []; currentIndex = -1;
+  refreshBookList(); renderPreview();
+});
+
+el('removeCurrentBtn').addEventListener('click', ()=>{
+  if(currentIndex<0) return;
+  book.splice(currentIndex,1);
+  if(currentIndex>=book.length) currentIndex = book.length-1;
+  refreshBookList(); renderPreview();
+});
+
+el('prevBtn').addEventListener('click', ()=>{ if(currentIndex>0){ currentIndex--; refreshBookList(); renderPreview(); } });
+el('nextBtn').addEventListener('click', ()=>{ if(currentIndex<book.length-1){ currentIndex++; refreshBookList(); renderPreview(); } });
+el('solutionToggle').addEventListener('change', (e)=>{ showSolution = e.target.checked; renderPreview(); });
+
+/* =========================================================================
+   8. PDF EXPORT — puzzle pages, then a scaled 4-up Solutions Index
+   ========================================================================= */
+function sleep0(){ return new Promise(r=> setTimeout(r,0)); }
+
+async function exportPDF(){
+  if(book.length === 0){ alert('Add at least one puzzle before exporting.'); return; }
+  const exportBtn = el('exportBtn');
+  exportBtn.disabled = true;
+  showProgress('Building PDF…');
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:'in', format:[PAGE_W, PAGE_H], orientation:'portrait'});
+  const bookTitle = (el('bookTitle').value || 'My Puzzle Book').trim();
+
+  // --- Title page ---
+  doc.setFillColor(255,255,255); doc.rect(0,0,PAGE_W,PAGE_H,'F');
+  doc.setDrawColor(20,20,30); doc.setLineWidth(0.02);
+  doc.rect(0.6,0.6,PAGE_W-1.2,PAGE_H-1.2,'S');
+  doc.setFont('helvetica','bold'); doc.setFontSize(30); doc.setTextColor(20,20,30);
+  doc.text(bookTitle, PAGE_W/2, 4.6, {align:'center', maxWidth: PAGE_W-2});
+  doc.setFont('helvetica','normal'); doc.setFontSize(13); doc.setTextColor(90,90,100);
+  doc.text(`${book.length} Puzzles  •  With Full Solutions`, PAGE_W/2, 5.3, {align:'center'});
+  doc.setFontSize(10);
+  doc.text(new Date().toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'}), PAGE_W/2, PAGE_H-1.0, {align:'center'});
+
+  let pageNumber = 1; // title page counts as page 1
+  let step = 0;
+  const totalSteps = book.length + Math.ceil(book.length/4) + 1;
+
+  for(let i=0;i<book.length;i++){
+    pageNumber++;
+    doc.addPage([PAGE_W,PAGE_H], 'portrait');
+    const box = pageBox(pageNumber);
+    const p = book[i];
+    const title = `PUZZLE #${i+1} — ${TYPE_LABELS[p.type]}`;
+    const cmds = wrapPage(ENGINES[p.type].render(p.data, box, 'puzzle'), pageNumber, title, box);
+    renderCommandsToPDF(doc, cmds);
+    step++; setProgress(step/totalSteps);
+    if(i % 3 === 2) await sleep0();
+  }
+
+  // --- Solutions Index divider ---
+  pageNumber++;
+  doc.addPage([PAGE_W,PAGE_H],'portrait');
+  doc.setFont('helvetica','bold'); doc.setFontSize(24); doc.setTextColor(20,20,30);
+  doc.text('SOLUTIONS INDEX', PAGE_W/2, PAGE_H/2-0.3, {align:'center'});
+  doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(100,100,110);
+  doc.text('Answer keys for every puzzle, 4 per page', PAGE_W/2, PAGE_H/2+0.25, {align:'center'});
+  doc.setFontSize(10);
+  doc.text(String(pageNumber), PAGE_W/2, PAGE_H-OUTER_MARGIN+0.20, {align:'center'});
+  step++; setProgress(step/totalSteps);
+  await sleep0();
+
+  // --- Solutions, 4-up per page ---
+  for(let i=0;i<book.length;i+=4){
+    pageNumber++;
+    doc.addPage([PAGE_W,PAGE_H],'portrait');
+    const box = pageBox(pageNumber);
+    const gap = 0.25;
+    const quadW = (box.contentW-gap)/2, quadH = (box.contentH-gap)/2;
+    const quads = [
+      {x:box.contentX, y:box.contentY},
+      {x:box.contentX+quadW+gap, y:box.contentY},
+      {x:box.contentX, y:box.contentY+quadH+gap},
+      {x:box.contentX+quadW+gap, y:box.contentY+quadH+gap}
+    ];
+    const cmds = [];
+    const chunk = book.slice(i, i+4);
+    chunk.forEach((p, qi)=>{
+      const q = quads[qi];
+      cmds.push({t:'text', x:q.x, y:q.y+0.14, s:`Solution #${i+qi+1} — ${TYPE_LABELS[p.type]}`, size:8.5, align:'left', bold:true, color:[60,60,70]});
+      cmds.push({t:'rect', x:q.x, y:q.y, w:quadW, h:quadH, lw:0.4, stroke:[210,210,220]});
+      const subBox = {contentX:q.x+0.08, contentY:q.y+0.28, contentW:quadW-0.16, contentH:quadH-0.36};
+      cmds.push(...ENGINES[p.type].render(p.data, subBox, 'solution'));
+    });
+    cmds.push({t:'text', x:PAGE_W/2, y:PAGE_H-OUTER_MARGIN+0.20, s:String(pageNumber), size:10, align:'center', color:[90,90,100]});
+    renderCommandsToPDF(doc, cmds);
+    step++; setProgress(step/totalSteps);
+    await sleep0();
+  }
+
+  const safeName = bookTitle.replace(/[^a-z0-9\-_ ]/gi,'').trim().replace(/\s+/g,'-') || 'KDP-Puzzle-Book';
+  doc.save(`${safeName}.pdf`);
+  hideProgress();
+  exportBtn.disabled = false;
+}
+
+el('exportBtn').addEventListener('click', ()=>{ exportPDF().catch(err=>{ console.error(err); hideProgress(); el('exportBtn').disabled=false; alert('Export failed: '+err.message); }); });
+
+/* initial render */
+refreshBookList();
+renderPreview();
+
+})();
+</script>
+</body>
+</html>
