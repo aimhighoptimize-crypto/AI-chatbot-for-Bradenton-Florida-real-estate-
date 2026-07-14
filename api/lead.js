@@ -1,20 +1,30 @@
-export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-  const { name, email, phone, area, timestamp } = req.body;
-  if (!email || !email.includes('@')) return res.status(400).json({ error: 'Valid email required' });
-  if (!process.env.GOOGLE_SHEETS_URL) return res.status(200).json({ ok: true });
+exports.handler = async function (event) {
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  };
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 200, headers, body: '' };
+  }
+  if (event.httpMethod !== 'POST') {
+    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
+  }
+  const { name, email, phone, area, timestamp } = JSON.parse(event.body || '{}');
+  if (!email || !email.includes('@')) {
+    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Valid email required' }) };
+  }
+  if (!process.env.GOOGLE_SHEETS_URL) {
+    return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
+  }
   try {
     await fetch(process.env.GOOGLE_SHEETS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, email, phone, area, timestamp, source: 'Bradenton AI Chatbot' }),
     });
-    return res.status(200).json({ ok: true });
+    return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
   } catch (err) {
-    return res.status(200).json({ ok: true });
+    return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
   }
-}
+};
